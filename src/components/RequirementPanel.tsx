@@ -1,0 +1,15 @@
+﻿import { useEffect, useRef, useState } from 'react';
+import { Evidence, Requirement } from '../data';
+export function EvidenceViewer({evidence,onClose}:{evidence:Evidence;onClose:()=>void}){
+ let url=evidence.url;
+ const drive=url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+ if(drive)url=`https://drive.google.com/file/d/${drive[1]}/preview`;
+ const safe=/^(https?:\/\/|\/[^/])/.test(url);
+ return <section className="evidence-view"><button onClick={onClose}>← Voltar ao requisito</button><h3>{evidence.title}</h3>{!safe?<p>Endereço de arquivo inválido.</p>:<>{evidence.type==='image'?<img src={url} alt={evidence.title}/>:evidence.type==='video'&&!drive?<video src={url} controls/>:evidence.type==='external'&&!drive?<p>Este conteúdo está disponível no site de origem.</p>:<iframe title={evidence.title} src={url} allow="fullscreen"/>}<a href={url} target="_blank" rel="noopener noreferrer">Abrir arquivo em outra aba ↗</a><small>Arquivos externos podem exigir autorização do proprietário.</small></>}</section>
+}
+export default function RequirementPanel({requirement,index,total,onClose,onNavigate}:{requirement:Requirement;index:number;total:number;onClose:()=>void;onNavigate:(index:number)=>void}){
+ const [evidence,setEvidence]=useState<Evidence>(); const dialog=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{dialog.current?.showModal(); const old=document.activeElement as HTMLElement; return()=>{old?.focus()}},[]);
+ useEffect(()=>setEvidence(undefined),[requirement.id]);
+ return <dialog ref={dialog} className="requirement-dialog" onCancel={onClose}><div className="dialog-body"><button autoFocus className="dialog-close" onClick={onClose} aria-label="Fechar requisito">×</button>{evidence?<EvidenceViewer evidence={evidence} onClose={()=>setEvidence(undefined)}/>:<><span className="eyebrow">ARQUIVO DO LÍDER · REQUISITO {String(requirement.id).padStart(2,'0')}</span><h2>{requirement.title}</h2><span className={`status ${requirement.status}`}>{requirement.status==='completed'?'Concluído':requirement.status==='review'?'A revisar':'Pendente'}</span><p>{requirement.officialDescription}</p>{requirement.completionDate&&<p>Conclusão: {requirement.completionDate}</p>}{requirement.summary&&<><h3>Registros da base existente</h3><p className="preserve-lines">{requirement.summary}</p><small>Conteúdo preservado do protótipo; precisa de validação. Os arquivos citados na base ainda não foram fornecidos.</small></>}<h3>Evidências</h3>{requirement.evidences.length?requirement.evidences.map((e,i)=><button className="evidence-link" key={i} onClick={()=>setEvidence(e)}>{e.type.toUpperCase()} · {e.title} ↗</button>):<p className="empty-state">Nenhuma evidência cadastrada para este requisito.</p>}</>}</div>{!evidence&&<nav className="panel-navigation" aria-label="Navega??o entre requisitos"><button disabled={index===0} onClick={()=>onNavigate(index-1)}>← Anterior</button><span>{index+1} / {total}</span><button disabled={index===total-1} onClick={()=>onNavigate(index+1)}>Próximo →</button></nav>}</dialog>
+}
